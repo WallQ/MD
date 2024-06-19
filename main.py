@@ -1,0 +1,163 @@
+import networkx as nx
+
+
+def calculate_weight(distance, time, consumption):
+    return round((distance * 0.2) + (((distance / 100) * consumption) * 0.2) + (time * 0.6), 2)
+
+
+locals = {
+    "A1": (41.320855, -8.145473),  # 4615 Hotel
+    "M1": (41.343831, -8.248757),  # Igreja de São Vicente de Sousa
+    "M2": (41.312157, -8.236581),  # Igreja do Salvador de Unhão
+    "M3": (41.314833, -8.198791),  # Igreja de Santa Maria de Airães
+    "M4": (41.304822, -8.181841),  # Igreja de São Mamede de Vila Verde
+    "M5": (41.279507, -8.253011),  # Igreja do Salvador de Aveleda
+    "M6": (41.382566, -8.225727),  # Mosteiro de Santa Maria de Pombeiro
+}
+
+# roads_data = {
+#     ("A1", "M1", 5.5, 8, 8.5),
+#     ("A1", "M2", 5.1, 7, 6.8),
+#     ("A1", "M3", 12.5, 17, 7),
+#     ("A1", "M4", 7.7, 12, 6.7),
+#     ("M1", "M2", 10.9, 14, 4.8),
+#     ("M1", "M3", 11.2, 14, 9.2),
+#     ("M1", "M5", 8.3, 13, 5.5),
+#     ("M2", "M4", 5.6, 8, 5.2),
+#     ("M2", "M6", 7.5, 11, 5.3),
+#     ("M3", "M5", 5.4, 8, 7.1),
+#     ("M3", "M6", 6, 8, 5.9),
+#     ("M4", "M5", 7.5, 11, 5.3),
+#     ("M4", "M6", 11.2, 14, 7.5),
+#     ("M5", "M6", 3.6, 6, 6.3),
+# }
+
+roads_data = {
+    ("A1", "M3", 5.5, 8, 8.5),
+    ("A1", "M4", 5.1, 7, 6.8),
+    ("A1", "M6", 12.5, 17, 7),
+    ("M6", "M1", 7.7, 12, 6.7),
+    ("M6", "M2", 10.9, 14, 4.8),
+    ("M6", "M3", 11.2, 14, 9.2),
+    ("M1", "M3", 8.3, 13, 5.5),
+    ("M1", "M2", 5.6, 8, 5.2),
+    ("M2", "M3", 5.4, 8, 7.1),
+    ("M2", "M5", 6, 8, 5.9),
+    ("M5", "M3", 7.5, 11, 5.3),
+    ("M5", "M4", 11.2, 14, 7.5),
+    ("M4", "M3", 3.6, 6, 6.3),
+}
+
+roads = {
+    (road[0], road[1], calculate_weight(road[2], road[3], road[4])) for road in roads_data
+}
+
+
+def create_network():
+    graph = nx.Graph()
+
+    for local in locals:
+        graph.add_node(local)
+
+    for road in roads:
+        graph.add_weighted_edges_from([(road[0], road[1], road[2])])
+
+    return graph
+
+
+def shortest_path_from_accommodation_to_furthest_local(network, accommodation):
+    max_distance = 0
+    farthest_monument = None
+
+    for local in locals:
+        distance = nx.shortest_path_length(network, source=accommodation, target=local, weight='weight')
+        if distance > max_distance:
+            max_distance = distance
+            farthest_monument = local
+
+    shortest_path = nx.shortest_path(network, source=accommodation, target=farthest_monument, weight='weight')
+
+    return farthest_monument, round(max_distance, 2), shortest_path
+
+
+def shortest_path_between_every_two_locations(network):
+    shortest_paths = dict(nx.all_pairs_dijkstra_path(network, weight='weight'))
+    shortest_distances = dict(nx.all_pairs_dijkstra_path_length(network, weight='weight'))
+
+    for source in shortest_paths:
+        for target in shortest_paths[source]:
+            print(f"Shortest route from {source} to {target}:")
+            print(f"Path: {shortest_paths[source][target]}")
+            print(f"Total distance: {shortest_distances[source][target]} km")
+            print()
+
+
+def check_dirac_theorem(graph):
+    n = graph.number_of_nodes()
+    if n < 3:
+        return False, "Graph has less than 3 vertices"
+
+    for node in graph.nodes():
+        if graph.degree(node) < n / 2:
+            return False, f"Vertex {node} violates Dirac's condition"
+
+    return True, "Graph satisfies Dirac's condition and is Hamiltonian"
+
+
+def check_ore_theorem(graph):
+    n = graph.number_of_nodes()
+    if n < 3:
+        return False, "Graph has less than 3 vertices"
+
+    non_adjacent_pairs = [(u, v) for u in graph.nodes() for v in graph.nodes() if u != v and not graph.has_edge(u, v)]
+
+    for u, v in non_adjacent_pairs:
+        if graph.degree(u) + graph.degree(v) < n:
+            return False, f"Pair ({u}, {v}) violates Ore's condition"
+
+    return True, "Graph satisfies Ore's condition and is Hamiltonian"
+
+
+def tsp_minimum_cost_cycle(graph):
+    tsp_cycle = nx.approximation.traveling_salesman_problem(graph, cycle=True, weight='weight')
+    return tsp_cycle
+
+
+def main():
+    network = create_network()
+
+    print("Adjacency matrix:")
+    print(nx.to_numpy_array(network))
+    print("\n")
+
+    print("Dirac's Theorem:")
+    satisfies_dirac, dirac_message = check_dirac_theorem(network)
+    print(satisfies_dirac, dirac_message)
+    print("\n")
+
+    print("Ore's Theorem:")
+    satisfies_ore, ore_message = check_ore_theorem(network)
+    print(satisfies_ore, ore_message)
+    print("\n")
+
+    # Ex. 2. a)
+    farthest_monument, max_distance, shortest_path = shortest_path_from_accommodation_to_furthest_local(network, "A1")
+    print("Farthest monument:", farthest_monument)
+    print("Distance:", max_distance)
+    print("Shortest path:", shortest_path)
+    print("\n")
+
+    # Ex. 2. b)
+    shortest_path_between_every_two_locations(network)
+    print("\n")
+
+    # Ex. 3. c)
+    path = tsp_minimum_cost_cycle(network)
+    print("Minimum cost Hamiltonian cycle starting at A1:")
+    print(f"Path: {path}")
+    # print(f"Total cost: {cost}")
+    print("\n")
+
+
+if __name__ == '__main__':
+    main()
