@@ -67,6 +67,11 @@ def create_network():
     return graph
 
 
+def transitive_closure(graph):
+    transitive_graph = nx.transitive_closure(graph)
+    return transitive_graph
+
+
 def check_dirac_theorem(graph):
     n = graph.number_of_nodes()
     if n < 3:
@@ -161,6 +166,10 @@ def main():
 
     print("Adjacency matrix:")
     print(nx.to_numpy_array(network))
+    print("\n")
+
+    print("Transitive Closure")
+    print(nx.to_numpy_array(transitive_closure(network)))
     print("\n")
 
     print("Dirac's Theorem:")
